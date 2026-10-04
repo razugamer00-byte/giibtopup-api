@@ -1,0 +1,68 @@
+export default async function handler(req, res) {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      success: false,
+      error: "Method Not Allowed"
+    });
+  }
+
+  const { uid, region = "bd" } = req.query;
+
+  // UID validation
+  if (!uid) {
+    return res.status(400).json({
+      success: false,
+      error: "UID is required"
+    });
+  }
+
+  if (!/^\d+$/.test(String(uid))) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid UID"
+    });
+  }
+
+  try {
+    const apiUrl =
+      `https://tracker.hlgamingofficial.com/api/player/${encodeURIComponent(uid)}` +
+      `?region=${encodeURIComponent(region)}`;
+
+    const response = await fetch(apiUrl);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: "UID not found"
+      });
+    }
+
+    const data = await response.json();
+
+    return res.status(200).json({
+      success: true,
+      uid: String(uid),
+      nickname: data.nickname ?? data.name ?? null,
+      level: data.level ?? null,
+      region: data.region ?? region,
+      data
+    });
+
+  } catch (error) {
+    console.error("UID API Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      error: "Unable to check UID"
+    });
+  }
+}
